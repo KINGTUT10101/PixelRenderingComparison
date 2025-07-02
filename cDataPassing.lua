@@ -1,0 +1,3 @@
+local testCData = ...
+
+print (testCData)
