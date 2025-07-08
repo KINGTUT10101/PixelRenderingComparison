@@ -33,13 +33,15 @@ local function makeByteData(totalBytes)
     return data, UINT8_PTR_TYPEOF(data:getFFIPointer())
 end
 
--- Create an RGBA8 image (4 bytes per pixel)
-local pointerImage = love.graphics.newImage(love.image.newImageData(mapData.width, mapData.height, 'rgba8'))
-local function plotImage()
-    local width, height = mapData.width, mapData.height
-    local BYTES_PER_PIXEL = 4 -- RGBA
-    local data, ptr = makeByteData(width * height * BYTES_PER_PIXEL)
+local width, height = mapData.width, mapData.height
+local BYTES_PER_PIXEL = 4 -- RGBA
+local imageData = love.image.newImageData(width, height, 'rgba8')
+local ptr = UINT8_PTR_TYPEOF(imageData:getFFIPointer())
 
+-- TODO: CHECK WHY THIS CAUSES A MEMORY LEAK
+-- Create an RGBA8 image (4 bytes per pixel)
+local pointerImage = love.graphics.newImage(imageData)
+local function plotImage()
     local grid = mapData.grid
     for i = 1, width do
         local firstPart = grid[i]
@@ -71,7 +73,6 @@ local function plotImage()
         end
     end
 
-    local imageData = love.image.newImageData(width, height, 'rgba8', data)
     pointerImage:replacePixels(imageData)
 end
 
