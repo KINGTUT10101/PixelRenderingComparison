@@ -35,13 +35,16 @@ end
 
 local width, height = mapData.width, mapData.height
 local BYTES_PER_PIXEL = 4 -- RGBA
-local imageData = love.image.newImageData(width, height, 'rgba8')
-local ptr = UINT8_PTR_TYPEOF(imageData:getFFIPointer())
+local imageData1 = love.image.newImageData(width, height, 'rgba8')
+local imageData2 = love.image.newImageData(width, height, 'rgba8')
+local ptr1 = UINT8_PTR_TYPEOF(imageData1:getFFIPointer())
+local ptr2 = UINT8_PTR_TYPEOF(imageData2:getFFIPointer())
 
 -- TODO: CHECK WHY THIS CAUSES A MEMORY LEAK
 -- Create an RGBA8 image (4 bytes per pixel)
-local pointerImage = love.graphics.newImage(imageData)
-local function plotImage()
+local pointerImage1 = love.graphics.newImage(imageData1)
+local pointerImage2 = love.graphics.newImage(imageData2)
+local function plotImageSingle()
     local grid = mapData.grid
     for i = 1, width do
         local firstPart = grid[i]
@@ -55,25 +58,75 @@ local function plotImage()
             -- Calculate pixel index (row-major order, 0-based)
             local pixelIndex = ((j - 1) * width + columnIndex) * BYTES_PER_PIXEL
             if paint ~= nil then
-                ptr[pixelIndex + 0] = math.max(0, math.min(255, paint[1] * 255))
-                ptr[pixelIndex + 1] = math.max(0, math.min(255, paint[2] * 255))
-                ptr[pixelIndex + 2] = math.max(0, math.min(255, paint[3] * 255))
-                ptr[pixelIndex + 3] = math.max(0, math.min(255, paint[4] * 255))
+                ptr1[pixelIndex + 0] = math.max(0, math.min(255, paint[1] * 255))
+                ptr1[pixelIndex + 1] = math.max(0, math.min(255, paint[2] * 255))
+                ptr1[pixelIndex + 2] = math.max(0, math.min(255, paint[3] * 255))
+                ptr1[pixelIndex + 3] = math.max(0, math.min(255, paint[4] * 255))
             elseif tint ~= nil then
-                ptr[pixelIndex + 0] = math.max(0, math.min(255, (color[1] + tint[1]) * 255))
-                ptr[pixelIndex + 1] = math.max(0, math.min(255, (color[2] + tint[2]) * 255))
-                ptr[pixelIndex + 2] = math.max(0, math.min(255, (color[3] + tint[3]) * 255))
-                ptr[pixelIndex + 3] = math.max(0, math.min(255, (color[4] + tint[4]) * 255))
+                ptr1[pixelIndex + 0] = math.max(0, math.min(255, (color[1] + tint[1]) * 255))
+                ptr1[pixelIndex + 1] = math.max(0, math.min(255, (color[2] + tint[2]) * 255))
+                ptr1[pixelIndex + 2] = math.max(0, math.min(255, (color[3] + tint[3]) * 255))
+                ptr1[pixelIndex + 3] = math.max(0, math.min(255, (color[4] + tint[4]) * 255))
             else
-                ptr[pixelIndex + 0] = math.max(0, math.min(255, color[1] * 255))
-                ptr[pixelIndex + 1] = math.max(0, math.min(255, color[2] * 255))
-                ptr[pixelIndex + 2] = math.max(0, math.min(255, color[3] * 255))
-                ptr[pixelIndex + 3] = math.max(0, math.min(255, color[4] * 255))
+                ptr1[pixelIndex + 0] = math.max(0, math.min(255, color[1] * 255))
+                ptr1[pixelIndex + 1] = math.max(0, math.min(255, color[2] * 255))
+                ptr1[pixelIndex + 2] = math.max(0, math.min(255, color[3] * 255))
+                ptr1[pixelIndex + 3] = math.max(0, math.min(255, color[4] * 255))
             end
         end
     end
 
-    pointerImage:replacePixels(imageData)
+    pointerImage1:replacePixels(imageData1)
+end
+local function plotImageDouble()
+    local grid = mapData.grid
+    for i = 1, width do
+        local firstPart = grid[i]
+        local columnIndex = i - 1
+        for j = 1, height do
+            local tileData = firstPart[j]
+            local color = particleData[tileData.id].color
+            local tint = tileData.tint
+            local paint = tileData.paint
+
+            -- Calculate pixel index (row-major order, 0-based)
+            local pixelIndex = ((j - 1) * width + columnIndex) * BYTES_PER_PIXEL
+            if paint ~= nil then
+                ptr1[pixelIndex + 0] = math.max(0, math.min(255, paint[1] * 255))
+                ptr1[pixelIndex + 1] = math.max(0, math.min(255, paint[2] * 255))
+                ptr1[pixelIndex + 2] = math.max(0, math.min(255, paint[3] * 255))
+                ptr1[pixelIndex + 3] = math.max(0, math.min(255, paint[4] * 255))
+
+                ptr2[pixelIndex + 0] = math.max(0, math.min(255, paint[1] * 255))
+                ptr2[pixelIndex + 1] = math.max(0, math.min(255, paint[2] * 255))
+                ptr2[pixelIndex + 2] = math.max(0, math.min(255, paint[3] * 255))
+                ptr2[pixelIndex + 3] = math.max(0, math.min(255, paint[4] * 255))
+            elseif tint ~= nil then
+                ptr1[pixelIndex + 0] = math.max(0, math.min(255, (color[1] + tint[1]) * 255))
+                ptr1[pixelIndex + 1] = math.max(0, math.min(255, (color[2] + tint[2]) * 255))
+                ptr1[pixelIndex + 2] = math.max(0, math.min(255, (color[3] + tint[3]) * 255))
+                ptr1[pixelIndex + 3] = math.max(0, math.min(255, (color[4] + tint[4]) * 255))
+
+                ptr2[pixelIndex + 0] = math.max(0, math.min(255, (color[1] + tint[1]) * 255))
+                ptr2[pixelIndex + 1] = math.max(0, math.min(255, (color[2] + tint[2]) * 255))
+                ptr2[pixelIndex + 2] = math.max(0, math.min(255, (color[3] + tint[3]) * 255))
+                ptr2[pixelIndex + 3] = math.max(0, math.min(255, (color[4] + tint[4]) * 255))
+            else
+                ptr1[pixelIndex + 0] = math.max(0, math.min(255, color[1] * 255))
+                ptr1[pixelIndex + 1] = math.max(0, math.min(255, color[2] * 255))
+                ptr1[pixelIndex + 2] = math.max(0, math.min(255, color[3] * 255))
+                ptr1[pixelIndex + 3] = math.max(0, math.min(255, color[4] * 255))
+
+                ptr2[pixelIndex + 0] = math.max(0, math.min(255, color[1] * 255))
+                ptr2[pixelIndex + 1] = math.max(0, math.min(255, color[2] * 255))
+                ptr2[pixelIndex + 2] = math.max(0, math.min(255, color[3] * 255))
+                ptr2[pixelIndex + 3] = math.max(0, math.min(255, color[4] * 255))
+            end
+        end
+    end
+    
+    pointerImage1:replacePixels(imageData1)
+    pointerImage2:replacePixels(imageData2)
 end
 
 local tempImageData = love.image.newImageData (1, 1)
@@ -277,8 +330,13 @@ function love.draw ()
 
     -- Uses a custom function to plot pixels on an image data, then converts and renders it
     elseif renderingMode == "ffi-bytedata-plotting" then
-        plotImage (mapData.width, mapData.height)
-        love.graphics.draw (pointerImage, 1, 1)
+        plotImageSingle (mapData.width, mapData.height)
+        love.graphics.draw (pointerImage1, 1, 1)
+
+    -- Uses a custom function to plot pixels on an image data, then converts and renders it
+    elseif renderingMode == "ffi-bytedata-plotting-double" then
+        plotImageDouble (mapData.width, mapData.height)
+        love.graphics.draw (pointerImage1, 1, 1)
 
     -- Uses a custom function to map pixels on an imagedata, then converts and renders it
     elseif renderingMode == "setPixel" then
@@ -413,6 +471,8 @@ function love.keypressed (key)
     elseif key == "5" then
         if love.keyboard.isDown ("lshift") == true then
             renderingMode = "ffi-bytedata-plotting"
+        elseif love.keyboard.isDown ("lctrl") == true then
+            renderingMode = "ffi-bytedata-plotting-double"
         else
             renderingMode = "ffi-color-tables"
         end
